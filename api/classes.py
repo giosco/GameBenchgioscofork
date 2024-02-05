@@ -17,6 +17,9 @@ class AvailableActions:
 
 @dataclass
 class Action:
+    def __init__(self):
+        self.action_type = None
+
     action_id: str
     openended_response: Optional[List] = None
 
