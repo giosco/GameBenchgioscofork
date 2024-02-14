@@ -1,7 +1,4 @@
-# Since we are in the PCI and cannot actually interface with a real API,
-# we will simulate the API interface with a random decision-making function.
-# The `api_interface_example` function below is designed to simulate receiving
-# decisions from an external source (e.g., an API).
+
 import ast
 from api.classes import Agent, Action, Observation, AvailableActions, Rules
 from dataclasses import dataclass, field
@@ -34,14 +31,16 @@ class PrimeClimbGame:
 
     )
     id: str = "prime_climb"
-    def init_game(self, agent1 : Agent, agent2 : Agent):
-        self.states = [{
-            "board": [None]*102,
-        }]
-        self.agents = [agent1(team_id = 0, agent_id = 0, **self.agent_1_kwargs),
-                       agent2(team_id = 1, agent_id = 1, **self.agent_2_kwargs)]
 
-        self.pawns = {agent.id: [0, 0] for agent in self.agents}  # Track pawn positions
+    def init_game(self, agent1: Agent, agent2: Agent):
+        self.states = [{
+            "board": [None] * 102,
+        }]
+        self.agents = [agent1(team_id=0, agent_id=0, **self.agent_1_kwargs),
+                       agent2(team_id=1, agent_id=1, **self.agent_2_kwargs)]
+
+        # Initialize pawn positions with structure {team_id: {pawn_id: position, ...}, ...}
+        self.pawns = {agent.team_id: {pawn_id: -1 for pawn_id in range(2)} for agent in self.agents}
         self.turn = 0
         self.winner = None
         self.dice = []
@@ -50,43 +49,52 @@ class PrimeClimbGame:
         self.card_manager = PrimeClimbCardManager()
         self.reverse_moves = {player: False for player in range(4)}
         self.skip_turns = {player: False for player in range(4)}
-        # Initialize board positions for pawns
-        for agent_id, positions in self.pawns.items():
-            for pawn_pos in positions:
-                self.board[pawn_pos] = agent_id  # Mark the agent's pawns on the board
-        self.card_manager = PrimeClimbCardManager()
+
 
     def move_pawn(self, agent_id, pawn_index, new_position):
-        # Move a pawn and update the board representation
-        old_position = self.pawns[agent_id][pawn_index]
-        self.board[old_position] = None  # Remove pawn from old position
-        self.pawns[agent_id][pawn_index] = new_position
-        self.board[new_position] = agent_id  # Place pawn in new position
-        current_position = self.pawns[player][self.pawns]
-        new_position = current_position
-        if 0 <= new_position <= 101:
-            self.pawns[agent_id][self.pawns] = new_position
-            self.check_bump(agent_id, self.pawns)
-
-    def check_bump(self, player, pawn):
-        position = self.pawns[player][pawn]
-        for opponent, pawns in self.pawns.items():
-            if opponent != player:
-                for idx, opp_position in enumerate(pawns):
-                    if opp_position == position:
-                        self.pawns[opponent][idx] = 0
+            # Validate new position is within board limits
+            if 0 <= new_position <= 101:
+                # Update the pawn's position in the pawns structure
+                self.pawns[agent_id][pawn_index] = new_position
+                # Check for bumping only if pawn is moved to a position on the board
+                if new_position > 0:
+                    self.check_bump(agent_id, pawn_index)
 
     def get_board_string(self):
         board = self.states[-1]["board"]
         row_strings = [", ".join(row) for row in board]
         board_string = "\n".join(row_strings)
         return board_string
+
+    def calculate_available_moves(self, agent_id):
+        moves = []
+        dice_rolls = self.dice
+        for pawn_id, position in self.pawns[agent_id].items():
+            for roll in dice_rolls:
+                # Add and Subtract
+                new_position_add = position + roll
+                new_position_sub = position - roll
+                if 1 <= new_position_add <= 101:
+                    moves.append((pawn_id, 'add', roll))
+                if 1 <= new_position_sub <= 101:
+                    moves.append((pawn_id, 'sub', roll))
+
+                # Multiply
+                new_position_mul = position * roll
+                if 1 <= new_position_mul <= 101:
+                    moves.append((pawn_id, 'mul', roll))
+
+                # Divide
+                if roll != 0 and position % roll == 0:
+                    new_position_div = position // roll
+                    if 1 <= new_position_div <= 101:
+                        moves.append((pawn_id, 'div', roll))
+        return moves
+
     def apply_move(self, player, pawn, operation, roll):
         current_position = self.pawns[player][pawn]
         new_position = current_position
-        if self.reverse_moves[player]:
-            new_position = current_position - roll  # Reverse the move
-            self.reverse_moves[player] = False  # Clear the reverse effect after applying
+
         if operation == "add":
             new_position += roll
         elif operation == "sub":
@@ -96,23 +104,29 @@ class PrimeClimbGame:
         elif operation == "div" and roll != 0:
             if current_position % roll == 0:
                 new_position //= roll
-
-        if 0 <= new_position <= 101:
+        # Ensure the new position is within board limits
+        if 1 <= new_position <= 101:
+            # Update pawn position
             self.pawns[player][pawn] = new_position
+            # Check for bump only if the move is valid
             self.check_bump(player, pawn)
-    def check_bump(self, player, pawn):
-        position = self.pawns[player][pawn]
-        for opponent, pawns in self.pawns.items():
-            if opponent != player:
-                for idx, opp_position in enumerate(pawns):
-                    if opp_position == position:
-                        self.pawns[opponent][idx] = 0
+
+    def check_bump(self, active_player, active_pawn):
+        active_pawn_position = self.pawns[active_player][active_pawn]
+        for player, pawns in self.pawns.items():
+            if player != active_player:  # Avoid checking the active player's own pawns
+                for pawn_id, position in pawns.items():
+                    if position == active_pawn_position:  # If another pawn is on the same position
+                        self.pawns[player][pawn_id] = -1  # Send the bumped pawn back to the start
+
     def check_win_condition(self):
-        for player, positions in self.pawns.items():
-            if all(pos == 101 for pos in positions):
+        for player, pawns in self.pawns.items():
+            if all(pos == 101 for pos in pawns.values()):  # Check if all pawns for the player are at position 101
                 self.winner = player
+                self.game_is_over = True
                 return True
         return False
+
     def play_turn(self, player, move_decisions):
         global card
         if self.skip_turns[player]:
@@ -132,19 +146,18 @@ class PrimeClimbGame:
                     self.card_manager.apply_card_effect(card, self, player)
                     self.card_manager.discard_card(card)  # Discard the card after using it
         self.card_manager.apply_card_effect(card, self, player)
+
     def get_observation(self, agent: Agent) -> Tuple[Observation, AvailableActions]:
         self.roll_dice()  # Roll dice at the beginning of each turn
         dice_rolls = f"Dice rolls: {self.dice}"
         board_state = self.get_board_string()  # Custom method to represent the game state as a string
 
-        # Assuming agent.agent_id maps to 'player' in your game logic
-        available_moves = self.play_turn(agent.agent_id)  # Custom method to calculate available moves
+        # Calculate available moves based on the current game state and dice rolls
+        available_moves = self.calculate_available_moves(agent.agent_id)
 
         observation = Observation(text=f"{board_state}\n{dice_rolls}")
         available_actions = AvailableActions(
-            instructions=f"Select a pawn and an operation (add, sub, mul, div) based on your dice rolls. Return your "
-                         f"actions as tuples with zero-indexed (x, y) coordinates of where you'd like to place your "
-                         f"pawns.",
+            instructions="Select a pawn and an operation (add, sub, mul, div) based on your dice rolls.",
             openended={})
         return observation, available_actions
 
@@ -160,24 +173,10 @@ class PrimeClimbGame:
         if self.check_win_condition():
             self.game_is_over = True
             self.winning_team = agent.team_id
+
     def roll_dice(self):
         roll1 = random.randint(0, 9)
         roll2 = random.randint(0, 9)
         self.dice = [10 if x == 0 else x for x in [roll1, roll2]]
 
-    #def play_game(self, api_interface):
-        #   while self.winner is None:
-        #      current_player = self.turn % len(self.pawns)
-        #    move_decisions = api_interface(current_player)
-        #   self.play_turn(current_player, move_decisions)
-    #   self.turn += 1
 
-
-
-# Initialize and play the game
-#game = PrimeClimbGame()
-#game.play_game(api_interface_example)
-
-# Return the results of the simulation
-#game_winner, game_log = game.winner, game.game_log
-#game_winner, game_log

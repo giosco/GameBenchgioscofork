@@ -45,29 +45,19 @@ class PrimeClimbCardManager:
                 print(f"Player {player} uses Double Move with a roll of {dice_roll}.")
             else:
                 print(f"No dice roll available for Double Move for player {player}.")
-
         elif card["name"] == "Prime Move":
             # Moves a pawn to the next prime number on the board
             print(f"Player: {player}, Pawns: {game_state.pawns[player]}")
-
-            # Comprehensive Debugging
-            print(f"Debugging Prime Move Card - Player: {player}, Pawns: {game_state.pawns}")
-
-            if player in game_state.pawns and isinstance(game_state.pawns[player], list):
-                for idx, pawn_position in enumerate(game_state.pawns[player]):
-                    print(f"Before Prime Move - Player {player}'s Pawn {idx} at position {pawn_position}")
-                    next_prime = self.find_next_prime(pawn_position)
-                    game_state.pawns[player][idx] = next_prime
-                    print(f"After Prime Move - Player {player}'s Pawn {idx} moves to next prime number {next_prime}")
-            else:
-                print(f"Error: Invalid player or pawn structure for player {player}")
-
+            for pawn_id, pawn_position in game_state.pawns[player].items():
+                print(f"Before Prime Move - Player {player}'s Pawn {pawn_id} at position {pawn_position}")
+                next_prime = self.find_next_prime(pawn_position)
+                game_state.pawns[player][pawn_id] = next_prime
+                print(f"After Prime Move - Player {player}'s Pawn {pawn_id} moves to next prime number {next_prime}")
         elif card["name"] == "Reverse":
             # Reverses the direction of the next player's pawn move
             next_player = (player + 1) % len(game_state.pawns)
             game_state.reverse_moves[next_player] = True
             print(f"Player {player} plays Reverse on player {next_player}.")
-
         elif card["name"] == "Skip":
             # Skips the next player's turn
             next_player = (player + 1) % len(game_state.pawns)
