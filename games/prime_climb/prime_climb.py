@@ -157,8 +157,16 @@ class PrimeClimbGame:
 
         observation = Observation(text=f"{board_state}\n{dice_rolls}")
         available_actions = AvailableActions(
-            instructions="Select a pawn and an operation (add, sub, mul, div) based on your dice rolls.",
-            openended={})
+            instructions="Select a pawn and an action (add, sub, mul, div) based on your dice rolls.",
+            openended={},
+            actions=[]
+        )
+        # Add the available moves to the available_actions object
+        for move in available_moves:
+            pawn_id, operation, roll = move
+            action_description = f"Pawn {pawn_id}, {operation}, using dice roll {roll}"
+            available_actions.add_action(action_description)
+
         return observation, available_actions
 
     def update(self, action, available_actions, agent):
@@ -179,4 +187,31 @@ class PrimeClimbGame:
         roll2 = random.randint(0, 9)
         self.dice = [10 if x == 0 else x for x in [roll1, roll2]]
 
+    def play(self):
+        player_1 = self.agents[0]
+        player_2 = self.agents[1]
+        self.game_is_over = False  # Ensure game state is properly initialized
 
+        while not self.game_is_over:
+            # Iterate through each player for their turn
+            for player in (player_1, player_2):
+                # Get the current state and available actions for the player
+                observation, available_actions = self.get_observation(player)
+
+                # Let the player take action based on the current state and available actions
+                action = player.take_action(self.rules, observation, available_actions, show_state=self.show_state)
+
+                # Update the game state based on the action taken
+                self.update(action, available_actions, player)
+
+                # Check if the game is over after the action is applied
+                if self.game_is_over:
+                    # Determine the outcome based on the winning team
+                    # If there's no winning team, it's a draw (0.5, 0.5)
+                    # If there is a winning team, set the score to (1, 0) or (0, 1) accordingly
+                    outcome = (0.5, 0.5) if self.winning_team is None else \
+                        (float(self.winning_team == player_1.team_id), float(self.winning_team == player_2.team_id))
+                    return outcome
+
+        # If the loop exits without finding a winner, return a draw (this should not happen with proper win condition checks)
+        return (0.5, 0.5)
