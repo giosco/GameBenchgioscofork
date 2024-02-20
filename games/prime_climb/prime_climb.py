@@ -158,6 +158,18 @@ class PrimeClimbGame:
         observation = Observation(text=f"{board_state}\n{dice_rolls}")
         available_actions = AvailableActions(
             instructions="Select a pawn and an action (add, sub, mul, div) based on your dice rolls.",
+            predefined={
+                "roll_dice"         : "Rolls two 10-sided dice. If doubles are rolled, the number can be used four times. The 0 represents 10.",
+                "move_pawn_add"     : "Move a pawn by adding the dice value to its current position. Each dice roll must be used separately.",
+                "move_pawn_subtract": "Move a pawn by subtracting the dice value from its current position. Each dice roll must be used separately.",
+                "move_pawn_multiply": "Move a pawn by multiplying its current position by the dice value. Each dice roll must be used separately.",
+                "move_pawn_divide"  : "Move a pawn by dividing its current position by the dice value. Only valid if the result is a whole number. Each dice roll must be used separately.",
+                "play_keeper_card"  : "Plays a Keeper Card, modifying the game state as per the card's rules. Cannot be played the turn it is drawn.",
+                "draw_action_card"  : "Draws an Action Card and applies its effect immediately. Effects can range from moving pawns to affecting opponents.",
+                "check_bump"        : "Checks if a pawn's new position results in bumping another pawn back to the start. Bumping is mandatory.",
+                "draw_prime_card"   : "Draws a Prime Card if a pawn ends on a prime number space that was not occupied at the start of the turn.",
+                "check_win_condition": "Checks if any player has won by getting both pawns to 101 exactly.",
+            },
             openended={},
             actions=[]
         )
