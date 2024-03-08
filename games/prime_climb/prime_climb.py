@@ -1,17 +1,17 @@
 
 import ast
-from api.classes import Agent, Action, Observation, AvailableActions, Rules
+from api.classes import Agent, Action, Observation, AvailableActions, Rules, Game
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Any
 import random
-from prime_climb_card_manager import PrimeClimbCardManager
+from games.prime_climb.prime_climb_card_manager import PrimeClimbCardManager
 
 
 @dataclass
-class PrimeClimbGame:
-    rules: Rules = Rules(
+class PrimeClimbGame(Game):
+    rules: Rules = field(default_factory=lambda: Rules(
         title="Prime Climb",
-        summary="Roll the dice and move your two pawns from 1 - 101, knocking your opponents back to start as you go.  "
+        summary="Roll the dice and move your two pawns from 1 to 101, knocking your opponents back to start as you go.  "
                 "Players use addition, subtraction, multiplication and division to get the center of the board to land "
                 "exactly on 101"
                 "Players race to be the first to get to the center of the board while avoiding getting knocked back to "
@@ -22,25 +22,39 @@ class PrimeClimbGame:
         additional_details={
             "Dice Rolling and Movement": "Players have two dice. The two numbers you roll will be used, one at a time, to move your pawns. In the case of doubles, you may use the number you rolled four times instead of twice. The 0 on the dice stands for 10. You must use all your rolls.",
             "Move Phase Operations": "During your Move Phase, you add, subtract, multiply, or divide the number your pawn is on by a number you rolled and send that pawn to the resulting number. You must use both of your rolled numbers, one at a time. If you have Keeper cards, you may choose to play one or more of them before, between, or after applying your dice rolls.",
-            "Keeper and Action Cards": "There are two types of cards: Keeper Cards and Action Cards. Keeper Cards: If you draw a Keeper Card, keep that card, face up, for a future turn. You may play any number of Keeper cards during your Move phase. You may not play a Keeper Card the turn you draw it. Action Cards: Any card that does not say Keeper on it is an Action Card. When you draw an Action Card, immediately perform the action the card requires. If the Action Card requires you to move one of your own pawns, you must move the pawn that landed on the red space; if both your pawns moved to red spaces that turn, you may choose the pawn the card applies to.",
+            "Action Cards": "Action Cards: Any card that does not say Keeper on it is an Action Card. When you draw an Action Card, immediately perform the action the card requires. The Action card requires you to move one of your own pawns by 5 positions on the board, you must move the pawn that landed on the red space; if both your pawns moved to red spaces that turn, you may choose the pawn the card applies to.",
             "Board Restrictions": "Pawns may never move to a space not on the board, such as negative numbers, non-whole numbers, or numbers greater than 101.",
             "Bumping Rules": "If you end your Move Phase with either of your pawns on the same space as another pawn, send the pawn you landed on back to Start. Bumping is not optional. Note: You can bump your own pawns. Note: You bump a pawn only when you end your turn on an occupied space, not when you pass through an occupied space.",
-            "Prime Cards": "You draw a Prime Card after your Move and Bump Phases are completed if at least one of your pawns is on an entirely red space (i.e., a prime number greater than 10), and that pawn did not begin its turn on that space. You may draw only one card per turn, even if both your pawns end on red spaces. No card trading is allowed!",
+            "Prime Cards": "You draw a Prime Card after your Move and Bump Phases are completed if at least one of your pawns is on a prime number greater than 10, and that pawn did not begin its turn on that space. Move your pawn to the next board values that is a prime number. You may draw only one card per turn. No card trading is allowed!",
             "End of Game": "When your first pawn reaches the 101 circle exactly, remove it from the board. You cannot move to a number past 101, or bounce off 101. After your first pawn reaches 101, you must apply all dice rolls to your remaining pawn. You win immediately when you can apply a dice roll or Keeper card to land your second pawn on 101. You do not have to use both dice rolls on your winning move. Do not draw a Prime Card when you land on 101."
         }
 
     )
+                         )
     id: str = "prime_climb"
 
-    def init_game(self, agent1: Agent, agent2: Agent):
+    def init_game(self, agent1_class: Agent, agent2_class: Agent):
         self.states = [{
-            "board": [None] * 102,
+            "board": ["-"] * 102,
         }]
-        self.agents = [agent1(team_id=0, agent_id=0, **self.agent_1_kwargs),
-                       agent2(team_id=1, agent_id=1, **self.agent_2_kwargs)]
+       # agents = [agent1(team_id=0, agent_id=0, **self.agent_1_kwargs),
+         #              agent2(team_id=1, agent_id=1, **self.agent_2_kwargs)]
 
+        agent1 = agent1_class(**self.agent_1_kwargs)
+        agent2 = agent2_class(**self.agent_2_kwargs)
+        agent1.team_id = 1
+        agent1.agent_id = 1
+        agent2.team_id = 2
+        agent2.agent_id = 2
+        self.agents = [agent1, agent2]
+        #agents[0].team_id = 0
+        #agents[1].team_id = 1
         # Initialize pawn positions with structure {team_id: {pawn_id: position, ...}, ...}
-        self.pawns = {agent.team_id: {pawn_id: -1 for pawn_id in range(2)} for agent in self.agents}
+        self.pawns = {
+            agent.team_id: {f"{agent.agent_id}_{pawn_id}":1 for pawn_id in range(2)}
+            for agent in self.agents
+        }
+        print("pawns are", self.pawns)
         self.turn = 0
         self.winner = None
         self.dice = []
@@ -49,92 +63,119 @@ class PrimeClimbGame:
         self.card_manager = PrimeClimbCardManager()
         self.reverse_moves = {player: False for player in range(4)}
         self.skip_turns = {player: False for player in range(4)}
+        # Initialize the board with pawns
+        for team_id, pawn_data in self.pawns.items():
+            for pawn_id, _ in pawn_data.items():  # We only need the pawn_id
+                self.states[0]["board"][team_id] = pawn_id
 
 
-    def move_pawn(self, agent_id, pawn_index, new_position):
+                #def move_pawn(self, agent_id, pawn_index, new_position):
             # Validate new position is within board limits
-            if 0 <= new_position <= 101:
+            #if 0 <= new_position <= 101:
                 # Update the pawn's position in the pawns structure
-                self.pawns[agent_id][pawn_index] = new_position
+                #self.pawns[agent_id][pawn_index] = new_position
+                # Update the board representation (with 0-based indexing)
+                #old_position = self.pawns[agent_id][pawn_index]
+                #self.board[old_position] = "-"  # Clear the old position
+                #self.board[new_position] = pawn_id  # Set the pawn on the new position
                 # Check for bumping only if pawn is moved to a position on the board
-                if new_position > 0:
-                    self.check_bump(agent_id, pawn_index)
+                #if new_position > 0:
+                #    self.check_bump(agent_id, pawn_index)
 
     def get_board_string(self):
         board = self.states[-1]["board"]
         row_strings = [", ".join(row) for row in board]
-        board_string = "\n".join(row_strings)
+        board_string = "-".join(row_strings)
         return board_string
 
     def calculate_available_moves(self, agent_id):
+        print("agent_id is", agent_id)
         moves = []
         dice_rolls = self.dice
-        for pawn_id, position in self.pawns[agent_id].items():
+        my_pawns = self.pawns[agent_id]
+        print(my_pawns)
+
+        for pawn_id, position in my_pawns.items():
+            print("pawn_id is", pawn_id)
+            print("position is ", position)
+           # print("self.pawns[agent_id].items()", self.pawns[agent_id].items())
+
             for roll in dice_rolls:
                 # Add and Subtract
                 new_position_add = position + roll
                 new_position_sub = position - roll
                 if 1 <= new_position_add <= 101:
-                    moves.append((pawn_id, 'add', roll))
+                    moves.append((pawn_id, position, 'adding', roll))
                 if 1 <= new_position_sub <= 101:
-                    moves.append((pawn_id, 'sub', roll))
-
+                    moves.append((pawn_id, position, 'subtracting', roll))
                 # Multiply
                 new_position_mul = position * roll
                 if 1 <= new_position_mul <= 101:
-                    moves.append((pawn_id, 'mul', roll))
-
+                    moves.append((pawn_id, position, 'multiplying', roll))
                 # Divide
                 if roll != 0 and position % roll == 0:
                     new_position_div = position // roll
                     if 1 <= new_position_div <= 101:
-                        moves.append((pawn_id, 'div', roll))
+                        moves.append((pawn_id, position, 'dividing', roll))
         return moves
 
-    def apply_move(self, player, pawn, operation, roll):
-        current_position = self.pawns[player][pawn]
-        new_position = current_position
-
-        if operation == "add":
-            new_position += roll
-        elif operation == "sub":
-            new_position -= roll
-        elif operation == "mul":
-            new_position *= roll
-        elif operation == "div" and roll != 0:
+    def apply_move(self, agent_id, pawn_id, operation, roll):
+        current_position = self.pawns[agent_id][pawn_id]
+        if operation == "adding":
+            new_position = current_position + roll  # Directly add
+        elif operation == "subtracting":
+            new_position = current_position - roll  # Directly subtract
+        elif operation == "multiplying":
+            # Consider how multiplication should work for your game
+            new_position = current_position * roll
+        elif operation == "dividing" and roll != 0:
             if current_position % roll == 0:
-                new_position //= roll
-        # Ensure the new position is within board limits
-        if 1 <= new_position <= 101:
+                # Consider how division should work for your game
+                new_position = current_position // roll
+                # Ensure the new position is within board limits
+        if 0 <= new_position <= 101:
+            print("BEFORE update:", self.states[-1]["board"])  # Print the board before
+
             # Update pawn position
-            self.pawns[player][pawn] = new_position
+            print("pawn from apply move function",pawn_id)
+            self.pawns[agent_id][pawn_id] = new_position
+            # Mark the new position with the pawn's identifier
+            self.states[-1]["board"][current_position-1] = "-"
+            print("Length of board list:", len(self.states[-1]["board"]))
+            print("current_position:", current_position)  # Added for debugging
+            print("new_position:", new_position)  # Added for debugging
+            self.states[-1]["board"][new_position-1] = str(pawn_id)
+            print("AFTER update:", self.states[-1]["board"])  # Print the board after
+
             # Check for bump only if the move is valid
-            self.check_bump(player, pawn)
+            self.check_bump(agent_id, pawn_id)
 
     def check_bump(self, active_player, active_pawn):
-        active_pawn_position = self.pawns[active_player][active_pawn]
+        print('BUMP function')
+        active_pawn_position = self.pawns[active_player][active_pawn] -1
         for player, pawns in self.pawns.items():
             if player != active_player:  # Avoid checking the active player's own pawns
                 for pawn_id, position in pawns.items():
-                    if position == active_pawn_position:  # If another pawn is on the same position
-                        self.pawns[player][pawn_id] = -1  # Send the bumped pawn back to the start
+                    if position -1 == active_pawn_position:  # If another pawn is on the same position
+                        self.pawns[player][pawn_id] = 1  # Send the bumped pawn back to the start
 
     def check_win_condition(self):
         for player, pawns in self.pawns.items():
-            if all(pos == 101 for pos in pawns.values()):  # Check if all pawns for the player are at position 101
+            if all(pos == 101 for pos in pawns.items()):  # Check if all pawns for the player are at position 101
                 self.winner = player
                 self.game_is_over = True
                 return True
         return False
 
     def play_turn(self, player, move_decisions):
+        #self.play_turn(agent.agent_id, pawn_idx, operation, self.dice[dice_idx])
         global card
         if self.skip_turns[player]:
             print(f"Player {player}'s turn is skipped.")
             self.skip_turns[player] = False  # Clear the skip effect after applying
             return False  # Skip the turn
         self.roll_dice()
-        for pawn_idx, operation, dice_idx in move_decisions:
+        for pawn_idx, position, operation, dice_idx in move_decisions:
             if dice_idx < len(self.dice):
                 self.apply_move(player, pawn_idx, operation, self.dice[dice_idx])
                 self.game_log.append((player, pawn_idx, operation, self.dice[dice_idx]))
@@ -147,48 +188,76 @@ class PrimeClimbGame:
                     self.card_manager.discard_card(card)  # Discard the card after using it
         self.card_manager.apply_card_effect(card, self, player)
 
-    def get_observation(self, agent: Agent) -> Tuple[Observation, AvailableActions]:
+    def get_observation(self, agent: Agent) -> tuple[Observation, AvailableActions]:
         self.roll_dice()  # Roll dice at the beginning of each turn
         dice_rolls = f"Dice rolls: {self.dice}"
+        #print("dice roll is", dice_rolls)
         board_state = self.get_board_string()  # Custom method to represent the game state as a string
-
+        available_actions = {}
         # Calculate available moves based on the current game state and dice rolls
         available_moves = self.calculate_available_moves(agent.agent_id)
-
+        #print("available_moves is", available_moves)
         observation = Observation(text=f"{board_state}\n{dice_rolls}")
         available_actions = AvailableActions(
-            instructions="Select a pawn and an action (add, sub, mul, div) based on your dice rolls.",
+            instructions="Select a pawn and an action (addition, subtraction, multiplication, division) based on your dice rolls.",
             predefined={
-                "roll_dice"         : "Rolls two 10-sided dice. If doubles are rolled, the number can be used four times. The 0 represents 10.",
-                "move_pawn_add"     : "Move a pawn by adding the dice value to its current position. Each dice roll must be used separately.",
-                "move_pawn_subtract": "Move a pawn by subtracting the dice value from its current position. Each dice roll must be used separately.",
-                "move_pawn_multiply": "Move a pawn by multiplying its current position by the dice value. Each dice roll must be used separately.",
-                "move_pawn_divide"  : "Move a pawn by dividing its current position by the dice value. Only valid if the result is a whole number. Each dice roll must be used separately.",
-                "play_keeper_card"  : "Plays a Keeper Card, modifying the game state as per the card's rules. Cannot be played the turn it is drawn.",
-                "draw_action_card"  : "Draw an Action Card and applies its effect immediately. Effects can range from moving pawns to affecting opponents.",
-                "check_bump"        : "Check if a pawn's new position results in bumping another pawn back to the start. Bumping is mandatory.",
-                "draw_prime_card"   : "Draw a Prime Card if a pawn ends on a prime number space that was not occupied at the start of the turn.",
-                "check_win_condition": "Check if any player has won by getting both pawns to 101 exactly.",
             },
             openended={},
-            actions=[]
+            #openended={"open": "use the rules to figure out a strategy to play"},
+
+            #openended={
+             #   "draw_prime_card"  : "Draw a Prime Card if a pawn ends on a prime number space that was not occupied at the start of the turn.",
+             #   "draw_action_card" : "Draw an Action Card and applies its effect immediately. Effects can range from moving pawns to affecting opponents.",
+             #   "play_prime_card"  : "Plays an Action Card, modifying the game state as per the card's rules. Cannot be played in the turn it is drawn.",
+                #"roll_the_dice": "Rolls two 10-sided dice. If doubles are rolled, the number can be used four times. The 0 represents 10.",
+                # "move_pawn_add"     : "Move a pawn by adding the dice value to its current position. Each dice roll must be used separately.",
+                # "move_pawn_subtract": "Move a pawn by subtracting the dice value from its current position. Each dice roll must be used separately.",
+                # "move_pawn_multiply": "Move a pawn by multiplying its current position by the dice value. Each dice roll must be used separately.",
+                # "move_pawn_divide"  : "Move a pawn by dividing its current position by the dice value. Only valid if the result is a whole number. Each dice roll must be used separately.",
+              #  "check_bump": "Check if a pawn's new position results in bumping another pawn back to the start. Bumping is mandatory.",
+              #  "check_win_condition": "Check if any player has won by getting both pawns to 101 exactly.",
+            #}
         )
         # Add the available moves to the available_actions object
         for move in available_moves:
-            pawn_id, operation, roll = move
-            action_description = f"Pawn {pawn_id}, {operation}, using dice roll {roll}"
-            available_actions.add_action(action_description)
-
+            #print("move is", move)
+            pawn_id, position, operation, roll = move
+            #print("move is type", type(move))
+            if operation in ['adding', 'subtracting']:
+                action_key = move
+                #action_key = f"{pawn_id}, {operation}, {roll}"
+                #print("pawn id is", pawn_id)
+                action_description = f"Move your {pawn_id} pawn by {operation} the dice value {roll} to its current position ({position} on the board). Each dice roll must be used separately."
+                available_actions.predefined[action_key] = action_description
+            else:
+                action_key = move
+                #action_key = f"move_pawn_{operation}"
+                action_description = f"Move a pawn by {operation} its current position ({position} on the board) with the dice value {roll}. Each dice roll must be used separately."
+                available_actions.predefined[action_key] = action_description
+        print("observation is", observation)
+        #print("available_actions are", available_actions)
         return observation, available_actions
 
     def update(self, action, available_actions, agent):
+        #print("Attempting to parse available_actions:", available_actions)
+        #print("Type of available_actions:", type(available_actions))
+        for key_tuple in available_actions.predefined.keys():
+            #print("available_actions.predefined keys are:", key_tuple)
+            #print("operations:", operations)
+            #print("dice_idx:", dice_idx)
+
+            try:
+                pawn_idx, position, operation, dice_idx = key_tuple
+                #pawn_idx, position, operation, dice_idx = ast.literal_eval(available_actions.predefined[action_key])
+            except ValueError as e:
+                print("Error parsing action_id:", e)
         # Parse the action (assuming action.action_id is structured as "(pawn_idx, operation, dice_idx)")
-        pawn_idx, operation, dice_idx = ast.literal_eval(action.action_id)
-
+        #pawn_idx, operation, dice_idx = ast.literal_eval(available_actions)
         # Apply the move
-        if dice_idx < len(self.dice):
-            self.apply_move(agent.agent_id, pawn_idx, operation, self.dice[dice_idx])
-
+            if dice_idx < len(self.dice):
+                move_decisions = [(pawn_idx, position, operation, dice_idx)]
+                self.play_turn(agent.agent_id, move_decisions)
+                #self.apply_move(agent.agent_id, pawn_idx, operation, self.dice[dice_idx])
         # Check for win condition
         if self.check_win_condition():
             self.game_is_over = True
@@ -212,10 +281,12 @@ class PrimeClimbGame:
 
                 # Let the player take action based on the current state and available actions
                 action = player.take_action(self.rules, observation, available_actions, show_state=self.show_state)
-
-                # Update the game state based on the action taken
+                if action.action_id not in available_actions.predefined and action.action_id not in available_actions.openended:
+                    action = Action(action_id=random.choice(list(available_actions.predefined.keys())))
                 self.update(action, available_actions, player)
-
+                # Update the game state based on the action taken
+                print("action is below")
+                print(vars(action))
                 # Check if the game is over after the action is applied
                 if self.game_is_over:
                     # Determine the outcome based on the winning team

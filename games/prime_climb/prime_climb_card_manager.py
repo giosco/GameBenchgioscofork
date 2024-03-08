@@ -39,9 +39,11 @@ class PrimeClimbCardManager:
             if dice_roll_index < len(game_state.dice):
                 dice_roll = game_state.dice[dice_roll_index]
                 # Apply the dice roll twice to a chosen pawn
-                chosen_pawn = 0  # Assuming the player chooses the first pawn
-                game_state.apply_move(player, chosen_pawn, 'add', dice_roll)
-                game_state.apply_move(player, chosen_pawn, 'add', dice_roll)
+                for pawn_id in game_state.pawns[player]:
+                    chosen_pawn = pawn_id
+                    break  # Exit the loop after finding the first pawn
+                game_state.apply_move(player, chosen_pawn, 'adding', dice_roll)
+                game_state.apply_move(player, chosen_pawn, 'adding', dice_roll)
                 print(f"Player {player} uses Double Move with a roll of {dice_roll}.")
             else:
                 print(f"No dice roll available for Double Move for player {player}.")
