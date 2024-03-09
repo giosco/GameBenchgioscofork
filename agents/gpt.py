@@ -5,7 +5,11 @@ import openai
 import api.util as util
 import ast
 import json
-
+#print("Current Working Directory for gpt:", os.getcwd())
+#base_dir = os.path.dirname(__file__)  # Get directory of 'gpt.py'
+#project_root = os.path.abspath(os.path.join(base_dir, '..')) # Go one level up
+#credentials_path = os.path.join(project_root, 'credentials.json')
+#api_key = util.load_json(credentials_path)["openai_api_key"]
 
 action_format_instructions_no_openended = """\
 Return actions in json with the following keys.
@@ -143,7 +147,9 @@ class OpenAITextAgent(Agent):
             self.print("GPT responded with", response)
 
             try:
+                #print("Raw GPT response:", response)
                 action = ast.literal_eval(response)
+                #print("ast.literal_eval(response)", action)
             except:
                 self.print("GPT returned invalid JSON")
                 continue
@@ -167,7 +173,7 @@ class OpenAITextAgent(Agent):
             messages.append({"role": "user", "content": error_message})
         if result == None:
             self.print(
-                f"WARNING: GPT returned an a random action after {self.max_retries} tries"
+                f"WARNING: GPT returned a random action after {self.max_retries} tries"
             )
             return Action(action_id=None)
         return Action(

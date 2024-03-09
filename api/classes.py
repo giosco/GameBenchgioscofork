@@ -15,23 +15,23 @@ class AvailableActions:
     predefined : Dict[str, str]
     openended : Dict[str, str]
 
+    def append(self, action_description):
+        pass
+
+
 @dataclass(frozen=True)
 class Action:
-    def __init__(self):
-        self.action_type = None
-
     action_id: str
     openended_response: Optional[tuple] = None
-
+    print("action class")
     def __str__(self):
         return self.action_id if self.openended_response is None else f"{self.action_id}: {self.openended_response}"
 
-@dataclass
 class Agent:
     team_id : int
     agent_id : int
     agent_type_id : str
-
+    print("agent class")
     @abstractmethod
     def take_action(self, rules : dict, observation: Observation, available_actions : AvailableActions):
         pass

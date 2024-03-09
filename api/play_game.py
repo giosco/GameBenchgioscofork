@@ -1,20 +1,28 @@
 import fire
-import api.util as util
+import util as util
 import random
 
 K = 32
 
 def play_game(agent_1_path, agent_2_path, game_path, num_matches = 1, save_results = True, show_state=False, agent_1_kwargs = {}, agent_2_kwargs = {}):
+    import os
+    ####
+    #print("Current Working Directory:", os.getcwd())
+    print("agent_1_path:", agent_1_path)
+    print("agent_2_path:", agent_2_path)
+    #print("Current Working Directocwecwewecwsdsdry:", os.getcwd())
+    ####
     agent_1_class = util.import_class(agent_1_path)
+    print("agent_1_class:", agent_1_class)
     agent_2_class = util.import_class(agent_2_path)
     agent_1_id = agent_1_class.agent_type_id
     agent_2_id = agent_2_class.agent_type_id
-
+    print("agent_1_id:", agent_1_id)
+    print("agent_2_id:", agent_2_id)
     save_results = True
     if agent_1_id == agent_2_id:
         print("You have passed the same class for both agents. No results will be saved.")
         save_results = False
-
     game_class = util.import_class(game_path)
 
     player_1_total = 0
