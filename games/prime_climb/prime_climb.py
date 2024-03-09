@@ -6,14 +6,14 @@ from typing import List, Tuple, Any
 import random
 from games.prime_climb.prime_climb_card_manager import PrimeClimbCardManager
 
-
+len_board=20
 @dataclass
 class PrimeClimbGame(Game):
     rules: Rules = field(default_factory=lambda: Rules(
         title="Prime Climb",
-        summary="Roll the dice and move your two pawns from 1 to 101, knocking your opponents back to start as you go.  "
+        summary="Roll the dice and move your two pawns from 1 to {len_board}, knocking your opponents back to start as you go.  "
                 "Players use addition, subtraction, multiplication and division to get the center of the board to land "
-                "exactly on 101"
+                "exactly on len_board"
                 "Players race to be the first to get to the center of the board while avoiding getting knocked back to "
                 "the start by other players. "
                 "Each player controls two pawns that start at the 1 circle. Players take turns rolling two 10-sided dice and applying the values to their two "
@@ -32,10 +32,9 @@ class PrimeClimbGame(Game):
     )
                          )
     id: str = "prime_climb"
-
     def init_game(self, agent1_class: Agent, agent2_class: Agent):
         self.states = [{
-            "board": ["-"] * 102,
+            "board": ["-"] * len_board,
         }]
         agent1 = agent1_class(**self.agent_1_kwargs)
         agent2 = agent2_class(**self.agent_2_kwargs)
@@ -84,18 +83,18 @@ class PrimeClimbGame(Game):
                 # Add and Subtract
                 new_position_add = position + roll
                 new_position_sub = position - roll
-                if 1 <= new_position_add <= 101:
+                if 1 <= new_position_add <= len_board:
                     moves.append((pawn_id, position, 'adding', roll))
-                if 1 <= new_position_sub <= 101:
+                if 1 <= new_position_sub <= len_board:
                     moves.append((pawn_id, position, 'subtracting', roll))
                 # Multiply
                 new_position_mul = position * roll
-                if 1 <= new_position_mul <= 101:
+                if 1 <= new_position_mul <= len_board:
                     moves.append((pawn_id, position, 'multiplying', roll))
                 # Divide
                 if roll != 0 and position % roll == 0:
                     new_position_div = position // roll
-                    if 1 <= new_position_div <= 101:
+                    if 1 <= new_position_div <= len_board:
                         moves.append((pawn_id, position, 'dividing', roll))
         return moves
 
@@ -116,7 +115,7 @@ class PrimeClimbGame(Game):
                 new_position = current_position
         else:
             new_position = current_position
-        if 1 <= new_position <= 101:
+        if 1 <= new_position <= len_board:
             print("BEFORE update:", self.states[-1]["board"])  # Print the board before
             # Update pawn position
             self.pawns[agent_id][pawn_id] = new_position
@@ -127,6 +126,7 @@ class PrimeClimbGame(Game):
         else:
             new_position = current_position - roll #going back on the board, similar to a reverse card
             self.pawns[agent_id][pawn_id] = new_position
+            self.states[-1]["board"][current_position-1] = "-"
             self.states[-1]["board"][new_position-1] = str(pawn_id)
             # Check for bump only if the move is valid
             self.check_bump(agent_id, pawn_id)
@@ -142,7 +142,7 @@ class PrimeClimbGame(Game):
 
     def check_win_condition(self):
         for player, pawns in self.pawns.items():
-            if all(pos == 101 for pos in pawns.items()):  # Check if all pawns for the player are at position 101
+            if any(pos == len_board for pos in pawns.items()):  # Check if all pawns for the player are at position 101
                 self.winner = player
                 self.game_is_over = True
                 return True
@@ -208,15 +208,15 @@ class PrimeClimbGame(Game):
 
     def update(self, action, available_actions, agent):
         for key_tuple in available_actions.predefined.keys():
-            print("available_actions.predefined keys are:", key_tuple)
+            #print("available_actions.predefined keys are:", key_tuple)
             try:
                 pawn_idx, position, operation, dice_idx = key_tuple
             except ValueError as e:
                 print("Error parsing action_id:", e)
         # Apply the move
             if dice_idx < len(self.dice):
-                print("dice_idx:", dice_idx)
-                print("pawn_idx:", pawn_idx)
+               # print("dice_idx:", dice_idx)
+                #print("pawn_idx:", pawn_idx)
                 move_decisions = [(pawn_idx, position, operation, dice_idx)]
                 self.play_turn(agent.agent_id, move_decisions)
         # Check for win condition

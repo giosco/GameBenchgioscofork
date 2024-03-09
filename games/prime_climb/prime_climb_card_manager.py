@@ -1,5 +1,5 @@
 import random
-
+len_board=20
 class PrimeClimbCardManager:
     def __init__(self, game_state):
         self.deck = self.initialize_deck()
@@ -9,9 +9,9 @@ class PrimeClimbCardManager:
     def initialize_deck(self):
         # Initialize a new deck of cards for the game
         cards = [
-            {"name": "Double Move", "type": "action"},
-            {"name": "Prime Move", "type": "action"},
-            {"name": "Reverse", "type": "action"},
+            {"name": "double_card", "type": "action"},
+            {"name": "prime_card", "type": "action"},
+            {"name": "reverse_card", "type": "action"},
         ]
         random.shuffle(cards)
         return cards
@@ -47,7 +47,7 @@ class PrimeClimbCardManager:
             self.game_state.apply_move(next_player, pawn_idx, 'prime_card', dice_roll)
             print(f"Player {player} plays Reverse on player {next_player}.")
 
-    def find_next_prime(self, current_position, max_limit=101):
+    def find_next_prime(self, current_position, max_limit=len_board):
         # This is a helper function to find the next prime number on the board
         def is_prime(num):
             if num < 2:
