@@ -12,7 +12,7 @@ class PrimeClimbCardManager:
         cards = [
             {"name": "double_card", "type": "action"},
             {"name": "prime_card", "type": "action"},
-            {"name": "reverse_card", "type": "action"},
+           # {"name": "reverse_card", "type": "action"},
         ]
         random.shuffle(cards)
         return cards
@@ -41,12 +41,15 @@ class PrimeClimbCardManager:
                 next_prime = self.find_next_prime(self.game_state.pawns[player][pawn_idx])
                 self.game_state.apply_move(player, pawn_idx, 'prime_card', next_prime)
                 print(f"After Prime Move - Player {player}'s Pawn {pawn_idx} moves to next prime number {next_prime}")
-        elif card["name"] == "reverse_card":
-            current_team = player // 2  # Assuming teams of two, find the player's team
-            other_team = (current_team + 1) % 2  # Find the other team (with modulo 2)
-            next_player = other_team * 2 + (player) % 2  # Get the opposing player within the other team
-            self.game_state.apply_move(next_player, pawn_idx, 'reverse_card', dice_roll)
-            print(f"Player {player} plays Reverse on player {next_player}.")
+        #elif card["name"] == "reverse_card":
+        #    current_team = player // 2
+        #    print("current team", current_team)# Assuming teams of two, find the player's team
+        #    other_team = (current_team + 1) % 2  # Find the other team (with modulo 2)
+         #   print("other_team team", other_team)# Assuming teams of two, find the player's team
+         #   next_player = other_team * 2 + (player) % 2  # Get the opposing player within the other team
+         #   print("next_player ", next_player)# Assuming teams of two, find the player's team
+         #   self.game_state.apply_move(next_player, pawn_idx, 'reverse_card', dice_roll)
+         #   print(f"Player {player} plays Reverse on player {next_player}.")
 
     def find_next_prime(self, current_position, max_limit=len_board):
         # This is a helper function to find the next prime number on the board
