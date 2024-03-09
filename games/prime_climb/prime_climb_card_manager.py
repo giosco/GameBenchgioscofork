@@ -30,7 +30,7 @@ class PrimeClimbCardManager:
             print("No more cards to draw.")
             return None  # Or return a special value that indicates no card could be drawn
 
-    def apply_card_effect(self,card, player, pawn_idx, dice_roll):
+    def apply_card_effect(self, card, player, pawn_idx, dice_roll):
         # Apply the effect of the drawn card to the game state
         print(f"Player {player} drew a {card['type']} card: {card['name']}")
         if card["name"] == "double_card":
@@ -44,8 +44,8 @@ class PrimeClimbCardManager:
         elif card["name"] == "reverse_card":
             current_team = player // 2  # Assuming teams of two, find the player's team
             other_team = (current_team + 1) % 2  # Find the other team (with modulo 2)
-            next_player = other_team * 2 + (player + 1) % 2  # Get the opposing player within the other team
-            self.game_state.apply_move(next_player, pawn_idx, 'prime_card', dice_roll)
+            next_player = other_team * 2 + (player) % 2  # Get the opposing player within the other team
+            self.game_state.apply_move(next_player, pawn_idx, 'reverse_card', dice_roll)
             print(f"Player {player} plays Reverse on player {next_player}.")
 
     def find_next_prime(self, current_position, max_limit=len_board):
