@@ -38,7 +38,7 @@ class PrimeClimbCardManager:
                 self.game_state.apply_move(player, pawn_idx, 'adding', dice_roll)
             print(f"Player {player} uses Double Move with a roll of {dice_roll}.")
         elif card["name"] == "prime_card":
-                next_prime = self.find_next_prime(self.pawns[player][pawn_idx])
+                next_prime = self.find_next_prime(self.game_state.pawns[player][pawn_idx])
                 self.game_state.apply_move(player, pawn_idx, 'prime_card', next_prime)
                 print(f"After Prime Move - Player {player}'s Pawn {pawn_idx} moves to next prime number {next_prime}")
         elif card["name"] == "reverse_card":
