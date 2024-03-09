@@ -1,17 +1,17 @@
 import random
 
 class PrimeClimbCardManager:
-    def __init__(self):
+    def __init__(self, game_state):
         self.deck = self.initialize_deck()
         self.discard_pile = []
+        self.game_state = game_state
 
     def initialize_deck(self):
         # Initialize a new deck of cards for the game
         cards = [
-            {"name": "Double Move", "type": "keeper"},
+            {"name": "Double Move", "type": "action"},
             {"name": "Prime Move", "type": "action"},
             {"name": "Reverse", "type": "action"},
-            {"name": "Skip", "type": "action"}
         ]
         random.shuffle(cards)
         return cards
@@ -29,42 +29,23 @@ class PrimeClimbCardManager:
             print("No more cards to draw.")
             return None  # Or return a special value that indicates no card could be drawn
 
-    def apply_card_effect(self, card, game_state, player):
+    def apply_card_effect(self,card, player, pawn_idx, dice_roll):
         # Apply the effect of the drawn card to the game state
         print(f"Player {player} drew a {card['type']} card: {card['name']}")
-        if card["name"] == "Double Move":
-            # The player can choose the first die roll to use twice for a single pawn move
-            # Let's assume the player chooses the first dice roll for simplicity
-            dice_roll_index = 0  # or 1 for the second dice roll
-            if dice_roll_index < len(game_state.dice):
-                dice_roll = game_state.dice[dice_roll_index]
-                # Apply the dice roll twice to a chosen pawn
-                for pawn_id in game_state.pawns[player]:
-                    chosen_pawn = pawn_id
-                    break  # Exit the loop after finding the first pawn
-                game_state.apply_move(player, chosen_pawn, 'adding', dice_roll)
-                game_state.apply_move(player, chosen_pawn, 'adding', dice_roll)
-                print(f"Player {player} uses Double Move with a roll of {dice_roll}.")
-            else:
-                print(f"No dice roll available for Double Move for player {player}.")
-        elif card["name"] == "Prime Move":
-            # Moves a pawn to the next prime number on the board
-            print(f"Player: {player}, Pawns: {game_state.pawns[player]}")
-            for pawn_id, pawn_position in game_state.pawns[player].items():
-                print(f"Before Prime Move - Player {player}'s Pawn {pawn_id} at position {pawn_position}")
-                next_prime = self.find_next_prime(pawn_position)
-                game_state.pawns[player][pawn_id] = next_prime
-                print(f"After Prime Move - Player {player}'s Pawn {pawn_id} moves to next prime number {next_prime}")
-        elif card["name"] == "Reverse":
-            # Reverses the direction of the next player's pawn move
-            next_player = (player + 1) % len(game_state.pawns)
-            game_state.reverse_moves[next_player] = True
+        if card["name"] == "double_card":
+            for _ in range(2):  # Repeat twice
+                self.game_state.apply_move(player, pawn_idx, 'adding', dice_roll)
+            print(f"Player {player} uses Double Move with a roll of {dice_roll}.")
+        elif card["name"] == "prime_card":
+                next_prime = self.find_next_prime(self.pawns[player][pawn_idx])
+                self.game_state.apply_move(player, pawn_idx, 'prime_card', next_prime)
+                print(f"After Prime Move - Player {player}'s Pawn {pawn_idx} moves to next prime number {next_prime}")
+        elif card["name"] == "reverse_card":
+            current_team = player // 2  # Assuming teams of two, find the player's team
+            other_team = (current_team + 1) % 2  # Find the other team (with modulo 2)
+            next_player = other_team * 2 + (player + 1) % 2  # Get the opposing player within the other team
+            self.game_state.apply_move(next_player, pawn_idx, 'prime_card', dice_roll)
             print(f"Player {player} plays Reverse on player {next_player}.")
-        elif card["name"] == "Skip":
-            # Skips the next player's turn
-            next_player = (player + 1) % len(game_state.pawns)
-            game_state.skip_turns[next_player] = True
-            print(f"Player {player} skips player {next_player}'s turn.")
 
     def find_next_prime(self, current_position, max_limit=101):
         # This is a helper function to find the next prime number on the board
@@ -75,13 +56,12 @@ class PrimeClimbCardManager:
                 if num % n == 0:
                     return False
             return True
+        print('current position for prime function',current_position)
         next_position = current_position + 1
         while next_position <= max_limit:
             if is_prime(next_position):
                 return next_position
             next_position += 1
-            print(f"Checking next position: {next_position}")  # Debugging statement
-
         print("No next prime found within the board limit.")  # Debugging statement
         return current_position  # Return the current position if no prime is found
 
