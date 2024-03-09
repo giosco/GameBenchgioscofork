@@ -124,7 +124,7 @@ class PrimeClimbGame(Game):
             self.states[-1]["board"][new_position-1] = str(pawn_id)
             #print("AFTER update:", self.states[-1]["board"])  # Print the board after
         else:
-            new_position = current_position - roll #going back on the board, similar to a reverse card
+            new_position = 2
             self.pawns[agent_id][pawn_id] = new_position
             self.states[-1]["board"][current_position-1] = "-"
             self.states[-1]["board"][new_position-1] = str(pawn_id)
