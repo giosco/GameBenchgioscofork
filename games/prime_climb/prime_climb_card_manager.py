@@ -2,6 +2,7 @@ import random
 len_board=20
 class PrimeClimbCardManager:
     def __init__(self, game_state):
+        self.pawns = None
         self.deck = self.initialize_deck()
         self.discard_pile = []
         self.game_state = game_state
